@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -eu
 
 if ! command -v git &> /dev/null; then
     echo "Error: git is not installed."
@@ -13,36 +13,40 @@ fi
 
 usage() {
     cat << EOF  
-Usage: $0 [-h] [-v] [-b branch] [file_path[:line_number]] [line_number]
+Usage: $0 [-h] [-v] [-p] [-b branch] [file_path[:line_number]] [line_number]
 Open the git repository in the browser.
 
--h, Display this help
+-h Display this help
 -v Verbose mode. Helpful for debugging. 
 -b Specify the branch to open. Default is the current branch.
+-p Print only the URL. Do not open the browser.
 
 EOF
 }
 
 
-while getopts "hv:b:" arg; do
-    case "${arg}" in
+while getopts "hvpb:" arg; do
+    case $arg in
         h) 
             usage
             exit 0
             ;;
         v)
-            set -xv  # Set xtrace and verbose mode.
+            set -x
             ;;
         b)
             BRANCH=${OPTARG}
             ;;
+        p)
+            PRINT_ONLY=true
+            ;;
         *)
+            echo "Error: Invalid argument."
             usage
             exit 1
-            # break;;
     esac
-    shift $((OPTIND-1))
 done
+shift $((OPTIND-1))
 
 URL_TYPE="uknown"
 # Get the file path if provided
@@ -94,17 +98,25 @@ REPO_URL=${REMOTE_URL%.git}
 if [ "${URL_TYPE:-}" == "file" ]; then
     # TODO allow specific branch
     # current_branch=$(git rev-parse --abbrev-ref HEAD)
+    REMOTE_HEAD_BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
     if [[ -z "${BRANCH:-}" ]]; then
-        BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
+        BRANCH=${REMOTE_HEAD_BRANCH}
     fi
     if [[ -n "${LINE_NUMBER:-}" ]]; then
-        open "${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}#L${LINE_NUMBER}"
+        URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}#L${LINE_NUMBER}"
     else
-        open "${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
+        URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
     fi
 elif [[ $URL_TYPE == "root" ]]; then
-    open "${REPO_URL}"
+    URL="${REPO_URL}"
 else
     echo "Error: Invalid URL type."
     exit 1
+fi
+
+
+if [[ -n "${PRINT_ONLY:-}" ]]; then
+    echo "$URL"
+else
+    open "$URL"
 fi
