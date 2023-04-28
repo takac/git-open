@@ -1,13 +1,15 @@
 #!/bin/bash
 set -u
 
+GIT_OPEN_DIR=$(pwd)
+
 function git_open_test() {
     local args=$1
     local expected=$2
     local rc_expected=${3:-0}
 
     echo git-open -p $args
-    actual=$(./git-open -p $args)
+    actual=$($GIT_OPEN_DIR/git-open -p $args)
     RC=$?
     if [[ $RC != $rc_expected ]]; then
         echo "FAIL" 
@@ -19,7 +21,7 @@ function git_open_test() {
         echo "Error: Expected $expected, got $actual"
         exit 1
     fi
-    echo "PASS: with args $1 and expected result $2" 
+    echo "PASS: with args '$1' and expected result '$2'" 
 }
 
 
@@ -30,4 +32,6 @@ git_open_test "-b main README.md" "https://github.com/takac/git-open/blob/main/R
 git_open_test "-b main README.md:10" "https://github.com/takac/git-open/blob/main/README.md#L10"
 git_open_test "-b main NOT_EXISTENT_README.md:10" "Error: File not found in the git repository." 1
 git_open_test "-x" "Error: Invalid argument." 1
-
+pushd /tmp > /dev/null
+git_open_test "" "Error: Not inside a git repository." 1
+popd > /dev/null

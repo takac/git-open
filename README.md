@@ -2,8 +2,7 @@
 
 Open files in a repository in the browser.
 
-You can specify directories and files, and files with line numbers. A branch
-can also be supplied.
+You can specify directories, files, and files with line numbers. Additionally, a branch can be provided.
 
 ## Usage
 
@@ -26,9 +25,17 @@ git open README.md:10
 
 ```bash
 git clone https://github.com/takac/git-open
-
 cd git-open
 # Copy to a place on your $PATH
 cp git-open /usr/local/bin
+# Or create a symlink
+ln -s $(pwd)/git-open /usr/local/bin
 ```
+
+## Tests
+Run the tests with:
+```
+./test.sh
+```
+
 
