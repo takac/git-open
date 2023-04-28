@@ -1,0 +1,33 @@
+#!/bin/bash
+set -u
+
+function git_open_test() {
+    local args=$1
+    local expected=$2
+    local rc_expected=${3:-0}
+
+    echo git-open -p $args
+    actual=$(./git-open -p $args)
+    RC=$?
+    if [[ $RC != $rc_expected ]]; then
+        echo "FAIL" 
+        echo "Error: Expected exit code $rc_expected, got $RC"
+        exit 1
+    fi
+    if [[ ! $actual =~ $expected ]]; then
+        echo "FAIL" 
+        echo "Error: Expected $expected, got $actual"
+        exit 1
+    fi
+    echo "PASS: with args $1 and expected result $2" 
+}
+
+
+git_open_test "" "https://github.com/takac/git-open"
+git_open_test "-v" "https://github.com/takac/git-open"
+git_open_test "-b master" "https://github.com/takac/git-open/tree/master"
+git_open_test "-b main README.md" "https://github.com/takac/git-open/blob/main/README.md"
+git_open_test "-b main README.md:10" "https://github.com/takac/git-open/blob/main/README.md#L10"
+git_open_test "-b main NOT_EXISTENT_README.md:10" "Error: File not found in the git repository." 1
+git_open_test "-x" "Error: Invalid argument." 1
+

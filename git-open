@@ -95,10 +95,9 @@ fi
 
 REMOTE_URL=$(git config --get remote.origin.url)
 REPO_URL=${REMOTE_URL%.git}
+REMOTE_HEAD_BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
 if [ "${URL_TYPE:-}" == "file" ]; then
-    # TODO allow specific branch
     # current_branch=$(git rev-parse --abbrev-ref HEAD)
-    REMOTE_HEAD_BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
     if [[ -z "${BRANCH:-}" ]]; then
         BRANCH=${REMOTE_HEAD_BRANCH}
     fi
@@ -108,7 +107,11 @@ if [ "${URL_TYPE:-}" == "file" ]; then
         URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
     fi
 elif [[ $URL_TYPE == "root" ]]; then
-    URL="${REPO_URL}"
+    if [[ -n "${BRANCH:-}" ]]; then
+        URL="${REPO_URL}/tree/${BRANCH}"
+    else
+        URL="${REPO_URL}"
+    fi
 else
     echo "Error: Invalid URL type."
     exit 1
