@@ -1,0 +1,122 @@
+#!/bin/bash
+set -eux
+
+if ! command -v git &> /dev/null; then
+    echo "Error: git is not installed."
+    exit 1
+fi
+
+if ! git rev-parse --is-inside-work-tree &> /dev/null; then
+    echo "Error: Not inside a git repository."
+    exit 1
+fi
+
+usage() {
+cat << EOF  
+Usage: $0 [-h] [-v]
+Open the git repository in the browser.
+
+-h, Display this help
+-v Verbose mode. Helpful for debugging. 
+
+EOF
+}
+
+
+# export verbose=0
+
+# $@ is all command line parameters passed to the script.
+# -o is for short options like -v
+# -l is for long options with double dash like --version
+# the comma separates different long options
+# -a is for long options with single dash like -version
+# options=$()
+
+# set --:
+# If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters 
+# are set to the arguments, even if some of them begin with a ‘-’.
+# eval set -- "$options"
+
+while getopts "hv:b:" arg; do
+    case "${arg}" in
+        h) 
+            usage
+            exit 0
+            ;;
+        v)
+            set -xv  # Set xtrace and verbose mode.
+            ;;
+        b)
+            BRANCH=${OPTARG}
+            ;;
+        *)
+            usage
+            exit 1
+            # break;;
+    esac
+    shift $((OPTIND-1))
+done
+
+URL_TYPE="uknown"
+# Get the file path if provided
+if [[ -n ${1:-} ]]; then
+    # if file path ends with :<line_number>, extract the line number
+    if [[ $1 =~ :[0-9]+$ ]]; then
+        LINE_NUMBER=${1##*:}
+        FILE_PATH=${1%:*}
+
+        if ! [[ $LINE_NUMBER =~ ^[0-9]+$ ]]; then
+            echo "Error: Invalid line number."
+            exit 1
+        fi
+
+        if [[ -n ${2:-} ]]; then
+            echo "Error: Too many arguments."
+            exit 1
+        fi
+    else
+        if [[ -n ${2:-} ]]; then
+            LINE_NUMBER=${2}
+        fi
+        FILE_PATH=$1
+    fi
+
+    # check if path is a directory
+    if [[ -d $FILE_PATH ]]; then
+        if [[ -n ${LINE_NUMBER:-} ]]; then
+            echo "Error: Cannot specify line number for a directory."
+            exit 1
+        fi
+    fi
+    GIT_FILE_PATH=$(realpath --relative-to="$(git rev-parse --show-toplevel)" "$FILE_PATH")
+
+    # Check if the file exists in the repo
+    if ! git ls-files --error-unmatch --full-name "$FILE_PATH" &> /dev/null; then
+        echo "Error: File not found in the git repository."
+        exit 1
+    fi
+
+    URL_TYPE="file"
+else
+    URL_TYPE="root"
+fi
+
+REMOTE_URL=$(git config --get remote.origin.url)
+REPO_URL=${REMOTE_URL%.git}
+if [ "${URL_TYPE:-}" == "file" ]; then
+    # TODO allow specific branch
+    # current_branch=$(git rev-parse --abbrev-ref HEAD)
+    if [[ -z "${BRANCH:-}" ]]; then
+        BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
+    fi
+    if [[ -n "${LINE_NUMBER:-}" ]]; then
+        open "${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}#L${LINE_NUMBER}"
+    else
+        open "${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
+    fi
+elif [[ $URL_TYPE == "root" ]]; then
+    open "${REPO_URL}"
+else
+    echo "Error: Invalid URL type."
+    exit 1
+fi
