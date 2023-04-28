@@ -12,30 +12,17 @@ if ! git rev-parse --is-inside-work-tree &> /dev/null; then
 fi
 
 usage() {
-cat << EOF  
-Usage: $0 [-h] [-v]
+    cat << EOF  
+Usage: $0 [-h] [-v] [-b branch] [file_path[:line_number]] [line_number]
 Open the git repository in the browser.
 
 -h, Display this help
 -v Verbose mode. Helpful for debugging. 
+-b Specify the branch to open. Default is the current branch.
 
 EOF
 }
 
-
-# export verbose=0
-
-# $@ is all command line parameters passed to the script.
-# -o is for short options like -v
-# -l is for long options with double dash like --version
-# the comma separates different long options
-# -a is for long options with single dash like -version
-# options=$()
-
-# set --:
-# If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters 
-# are set to the arguments, even if some of them begin with a ‘-’.
-# eval set -- "$options"
 
 while getopts "hv:b:" arg; do
     case "${arg}" in
@@ -98,6 +85,7 @@ if [[ -n ${1:-} ]]; then
 
     URL_TYPE="file"
 else
+    # If no file path is provided, open the repo root
     URL_TYPE="root"
 fi
 
