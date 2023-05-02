@@ -20,12 +20,13 @@ Open the git repository in the browser.
 -v Verbose mode. Helpful for debugging. 
 -b Specify the branch to open. Default is the current branch.
 -p Print only the URL. Do not open the browser.
+-r Specify the remote name. Default is origin.
 
 EOF
 }
 
 
-while getopts "hvpb:" arg; do
+while getopts "hvpb:r:" arg; do
     case $arg in
         h) 
             usage
@@ -40,6 +41,9 @@ while getopts "hvpb:" arg; do
         p)
             PRINT_ONLY=true
             ;;
+        r)
+            REMOTE_NAME=${OPTARG}
+            ;;
         *)
             echo "Error: Invalid argument."
             usage
@@ -48,7 +52,6 @@ while getopts "hvpb:" arg; do
 done
 shift $((OPTIND-1))
 
-URL_TYPE="uknown"
 # Get the file path if provided
 if [[ -n ${1:-} ]]; then
     # if file path ends with :<line_number>, extract the line number
@@ -93,18 +96,23 @@ else
     URL_TYPE="root"
 fi
 
-REMOTE_URL=$(git config --get remote.origin.url)
+REMOTE_NAME=${REMOTE_NAME:-origin}
+
+REMOTE_URL=$(git config --get "remote.${REMOTE_NAME}.url")
 REPO_URL=${REMOTE_URL%.git}
-REMOTE_HEAD_BRANCH=$(git branch -r | grep origin/HEAD | sed 's/.*-> origin\///')
+# Find default upstream branch
+REMOTE_HEAD_REF=$(git symbolic-ref "refs/remotes/${REMOTE_NAME}/HEAD")
+# Out: refs/remotes/origin/master
+REMOTE_HEAD_BRANCH=${REMOTE_HEAD_REF#"refs/remotes/${REMOTE_NAME}/"}
+
 if [ "${URL_TYPE:-}" == "file" ]; then
-    # current_branch=$(git rev-parse --abbrev-ref HEAD)
     if [[ -z "${BRANCH:-}" ]]; then
         BRANCH=${REMOTE_HEAD_BRANCH}
     fi
+
+    URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
     if [[ -n "${LINE_NUMBER:-}" ]]; then
-        URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}#L${LINE_NUMBER}"
-    else
-        URL="${REPO_URL}/blob/${BRANCH}/${GIT_FILE_PATH}"
+        URL="${URL}#L${LINE_NUMBER}"
     fi
 elif [[ $URL_TYPE == "root" ]]; then
     if [[ -n "${BRANCH:-}" ]]; then
@@ -113,6 +121,7 @@ elif [[ $URL_TYPE == "root" ]]; then
         URL="${REPO_URL}"
     fi
 else
+    # Should never reach here
     echo "Error: Invalid URL type."
     exit 1
 fi

@@ -8,30 +8,39 @@ function git_open_test() {
     local expected=$2
     local rc_expected=${3:-0}
 
-    echo git-open -p $args
+    echo git-open -p "$args"
     actual=$($GIT_OPEN_DIR/git-open -p $args)
     RC=$?
-    if [[ $RC != $rc_expected ]]; then
+    if [[ $RC != "${rc_expected}" ]]; then
         echo "FAIL" 
         echo "Error: Expected exit code $rc_expected, got $RC"
         exit 1
     fi
-    if [[ ! $actual =~ $expected ]]; then
+
+    if [[ $actual =~ $expected || "$actual" == "$expected" ]]; then
+        echo "PASS: with args '$1' and expected result '$2'" 
+    else
         echo "FAIL" 
-        echo "Error: Expected $expected, got $actual"
+        echo "Error: Expected '$expected', got '$actual'"
         exit 1
     fi
-    echo "PASS: with args '$1' and expected result '$2'" 
 }
 
 
 git_open_test "" "https://github.com/takac/git-open"
 git_open_test "-v" "https://github.com/takac/git-open"
 git_open_test "-b master" "https://github.com/takac/git-open/tree/master"
-git_open_test "-b main README.md" "https://github.com/takac/git-open/blob/main/README.md"
-git_open_test "-b main README.md:10" "https://github.com/takac/git-open/blob/main/README.md#L10"
+git_open_test "-b bob" "https://github.com/takac/git-open/tree/bob"
+git_open_test "README.md" "https://github.com/takac/git-open/blob/main/README.md"
+git_open_test "-b master README.md" "https://github.com/takac/git-open/blob/master/README.md"
+git_open_test "-b master README.md:10" "https://github.com/takac/git-open/blob/master/README.md#L10"
+git_open_test "-b xyz README.md:10" "https://github.com/takac/git-open/blob/xyz/README.md#L10"
+git_open_test "-b main README.md:10 10" "Error: Too many arguments." 1
 git_open_test "-b main NOT_EXISTENT_README.md:10" "Error: File not found in the git repository." 1
 git_open_test "-x" "Error: Invalid argument." 1
-pushd /tmp > /dev/null
+pushd /tmp > /dev/null || exit 1
 git_open_test "" "Error: Not inside a git repository." 1
-popd > /dev/null
+popd > /dev/null || exit 1
+# no remote called bob
+git_open_test "-r bob" "" 1
+git_open_test "-r origin" "https://github.com/takac/git-open"
