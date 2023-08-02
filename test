@@ -44,3 +44,8 @@ popd > /dev/null || exit 1
 # no remote called bob
 git_open_test "-r bob" "" 1
 git_open_test "-r origin" "https://github.com/takac/git-open"
+
+# test with missing git remote HEAD branch
+git remote set-head origin -d
+git_open_test "README.md:10" "https://github.com/takac/git-open/blob/master/README.md#L10"
+git remote set-head origin -a

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -eux
 
 if ! command -v git &> /dev/null; then
     echo "Error: git is not installed."
@@ -101,7 +101,10 @@ REMOTE_NAME=${REMOTE_NAME:-origin}
 REMOTE_URL=$(git config --get "remote.${REMOTE_NAME}.url")
 REPO_URL=${REMOTE_URL%.git}
 # Find default upstream branch
-REMOTE_HEAD_REF=$(git symbolic-ref "refs/remotes/${REMOTE_NAME}/HEAD")
+REMOTE_HEAD_REF=$(git symbolic-ref "refs/remotes/${REMOTE_NAME}/HEAD" || true)
+# Fall back to "master" as defaul if remote head is not set
+# can be updated with `git remote set-head origin -a`
+REMOTE_HEAD_REF=${REMOTE_HEAD_REF:-refs/remotes/${REMOTE_NAME}/master}
 # Out: refs/remotes/origin/master
 REMOTE_HEAD_BRANCH=${REMOTE_HEAD_REF#"refs/remotes/${REMOTE_NAME}/"}
 
