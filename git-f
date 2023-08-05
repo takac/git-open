@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# script to list all files modfiied/deleted/etc in the repo relative to the current directory
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+# RELATIVE=$(realpath --relative-to="$GIT_ROOT" "$PWD")
+RELATIVE=$(realpath --relative-to="$PWD" "$GIT_ROOT")
+
+# echo $RELATIVE
+if [[ $RELATIVE == "." ]]; then
+    RELATIVE=""
+else
+    RELATIVE="$RELATIVE/"
+fi
+
+git status --porcelain --untracked-files=no | sed -e "s#^ M \(.*\)#\1 MODIFIED#" -e "s#^ D \(.*\)#\1 DELETED#" -e "s#^#$RELATIVE#"
